@@ -1,2 +1,4 @@
 selenium
 yt-dlp
+undetected-chromedriver
+prefect
