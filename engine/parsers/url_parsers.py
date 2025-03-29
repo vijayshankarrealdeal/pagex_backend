@@ -1,7 +1,8 @@
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import AzureChatOpenAI
 from langchain.prompts import PromptTemplate
 from engine.models.url_model import URLResponseModel
-from prefect import task
+from prefect import task, get_run_logger
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -14,9 +15,10 @@ given a list of urls : {url_list}
 and a user query : {user_query}
 Extract the urls and their titles from the list of urls.
 """
-@task
+
+@task(name="LLM Runs", retries=3, retry_delay_seconds=5, log_prints=True)
 async def url_link_parser(user_query, url_list):
-    print("Running URL Link Parser")
+    logger = get_run_logger()
     llm = AzureChatOpenAI(
         api_version="2024-08-01-preview",
         deployment_name="gpt-4o-0806",
@@ -30,4 +32,21 @@ async def url_link_parser(user_query, url_list):
         )
     chain = prompt | llm
     response = await chain.ainvoke({"user_query": user_query, "url_list": url_list})
+    logger.info(f"LLM Response: {response}")
     return response
+
+
+    # llm = ChatGoogleGenerativeAI(
+    #     model="gemini-1.5-pro",
+    #     temperature=0,
+    #     max_tokens=None,
+    #     timeout=None,
+    #     max_retries=2,
+    #     # other params...
+    # ).with_structured_output(URLResponseModel)
+    # prompt = PromptTemplate(
+    #         template=PROMPT,
+    #         input_variables=["user_query", "url_list"],
+    #     )
+    # chain = prompt | llm
+    # response = await chain.ainvoke({"user_query": user_query, "url_list": url_list})

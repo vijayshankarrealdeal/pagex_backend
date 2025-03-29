@@ -2,3 +2,4 @@ selenium
 yt-dlp
 undetected-chromedriver
 prefect
+langchain-google-genai
