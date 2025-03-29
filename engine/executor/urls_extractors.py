@@ -3,8 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-import time, multiprocessing
-from bs4 import BeautifulSoup
+import time
 import asyncio
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -41,7 +40,7 @@ def run_search(search_term):
     )
     driver.get(f"https://www.google.com/search?q={search_term}")
     logger.info(f"Searching for: {search_term} {driver.page_source}")
-    time.sleep(1)  # wait for the page to load
+    time.sleep(3)  # wait for the page to load
     return driver.page_source
 
 
@@ -63,7 +62,7 @@ def get_driver():
     if thread_id not in driver_pool:
         chrome_options = Options()
         # Use the new headless mode (Chrome 109+) which can be faster/stabler
-        chrome_options.add_argument("--headless=new")
+        # chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-extensions")
         chrome_options.add_argument("--disable-popup-blocking")

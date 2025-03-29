@@ -11,10 +11,10 @@ load_dotenv()
 PROMPT = """
 You are a powerful llm, who is creative and intelligent.
 when extracting the url remove all google polices, support and login urls, and irrelevant urls which dono't have any content to user query,
-include social media urls (instagram, X(Twitter), Reddit, Facebook), and youtube urls.
+if present include social media urls (instagram, X(Twitter), Reddit, Facebook), Music Platform(Spotify, Apple Music, Jio Saavan) and youtube urls.
 given a list of urls : {url_list}
 and a user query : {user_query}
-Extract the urls and their titles from the list of urls.
+Extract the urls and their titles from the list of urls, extract as much as relevance url you can.
 """
 
 @task(name="LLM Runs", retries=3, retry_delay_seconds=5, log_prints=True)
