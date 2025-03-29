@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-import time
+import time, multiprocessing
 from bs4 import BeautifulSoup
 import asyncio
 from selenium import webdriver
@@ -11,47 +11,50 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 import threading
 from prefect import task, get_run_logger
+import lxml.html
+from engine.models.url_model import BasePayload
 
 # Create a thread-local driver pool to reuse drivers per thread.
 driver_pool = {}
 
 
-
-
 @task(log_prints=True)
 def run_search(search_term):
-    # create Chromeoptions instance 
+    # create Chromeoptions instance
     logger = get_run_logger()
-    options = webdriver.ChromeOptions() 
-    # adding argument to disable the AutomationControlled flag 
-    options.add_argument("--disable-blink-features=AutomationControlled") 
-    
-    # exclude the collection of enable-automation switches 
-    options.add_experimental_option("excludeSwitches", ["enable-automation"]) 
-    
-    # turn-off userAutomationExtension 
-    options.add_experimental_option("useAutomationExtension", False) 
-    
-    # setting the driver path and requesting a page 
-    driver = webdriver.Chrome(options=options) 
-    
-    # changing the property of the navigator value for webdriver to undefined 
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
+    options = webdriver.ChromeOptions()
+    # adding argument to disable the AutomationControlled flag
+    options.add_argument("--disable-blink-features=AutomationControlled")
+
+    # exclude the collection of enable-automation switches
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+
+    # turn-off userAutomationExtension
+    options.add_experimental_option("useAutomationExtension", False)
+
+    # setting the driver path and requesting a page
+    driver = webdriver.Chrome(options=options)
+
+    # changing the property of the navigator value for webdriver to undefined
+    driver.execute_script(
+        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+    )
     driver.get(f"https://www.google.com/search?q={search_term}")
     logger.info(f"Searching for: {search_term} {driver.page_source}")
     time.sleep(1)  # wait for the page to load
     return driver.page_source
 
-@task
-def extract_url_and_text(html):
-    soup = BeautifulSoup(html, "html.parser")
-    links = []
-    for a in soup.find_all("a", href=True):
-        link = a["href"]
-        text = a.get_text(strip=True)
-        links.append({"url": link, "text": text})
-    return links
 
+@task
+def extract_url_and_text(html: str):
+    tree = lxml.html.fromstring(html)
+    anchors = tree.xpath("//a[@href]")
+    results = []
+    for a in anchors:
+        link = a.get("href")
+        text = a.text_content().strip()
+        results.append(BasePayload(url=link, title=text))
+    return results
 
 
 def get_driver():
@@ -87,29 +90,33 @@ def extract_page_info(url: str):
     driver = get_driver()
     try:
         # Hide the 'webdriver' property (sometimes websites block automation tools)
-        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        driver.execute_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        )
 
         driver.get(url)
 
         # Attempt to auto-click common cookie/consent buttons
         try:
-            driver.execute_script("""
+            driver.execute_script(
+                """
                 document.querySelectorAll('[aria-label="Accept cookies"], 
                 button.cookie-accept, button#accept-cookies')
                 .forEach(el => el.click());
-            """)
+            """
+            )
         except Exception:
             pass  # Ignore if not found
 
         title = driver.title
         # Grab first 200 characters of page source for a snippet
-        page_snippet = driver.page_source[:200]
+        page_snippet = driver.page_source
 
     except Exception as e:
         title = f"Error: {e}"
         page_snippet = ""
 
-    return {"url": url, "title": title, "snippet": page_snippet}
+    return BasePayload(url=url, title=title, summary=page_snippet, is_youtube=False)
 
 
 @task
@@ -120,10 +127,7 @@ async def extract_external_links(urls: list):
 
     # Use a ThreadPoolExecutor with enough workers (8 or more, if your machine can handle it).
     with ThreadPoolExecutor(max_workers=8) as executor:
-        tasks = [
-            loop.run_in_executor(executor, extract_page_info, url)
-            for url in urls
-        ]
+        tasks = [loop.run_in_executor(executor, extract_page_info, url) for url in urls]
         results = await asyncio.gather(*tasks)
 
     # Close all drivers after completing.
