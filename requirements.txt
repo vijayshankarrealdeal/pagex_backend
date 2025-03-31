@@ -3,3 +3,6 @@ yt-dlp
 undetected-chromedriver
 prefect
 langchain-google-genai
+lxml_html_clean
+google-generativeai
+google-genai

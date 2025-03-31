@@ -1,37 +1,85 @@
+import asyncio
 from typing import List
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_openai import AzureChatOpenAI
-from langchain.prompts import PromptTemplate
-from engine.models.url_model import BasePayload, URLResponseModel
+
+from engine.llm.all_llm import LLMResponse
+from engine.models.url_model import BasePayload, PageContent, URLResponseModel
 from prefect import task, get_run_logger
-from dotenv import load_dotenv
-load_dotenv()
+from engine.utils import TRIM_CONSTANT
 
 
-PROMPT = """
-You are a powerful llm, who is creative and intelligent.
-when extracting the url remove all google polices, support and login urls, and irrelevant urls which dono't have any content to user query,
-if present include social media urls (instagram, X(Twitter), Reddit, Facebook), Music Platform(Spotify, Apple Music, Jio Saavan) and youtube urls.
-given a list of urls : {url_list}
-and a user query : {user_query}
-Extract the urls and their titles from the list of urls, extract as much as relevance url you can.
+PROMPT_1 = """You are an intelligent and creative language model.
+
+Your task is to extract the most relevant URLs as much you can and their titles based on the user's query.
+
+**Instructions:**
+- Remove any Google policy, login, support, or irrelevant URLs.
+- Include as much URLs only if they relate to the user's query.
+- Prefer social media (Instagram, Twitter/X, Reddit, Facebook), music platforms (Spotify, Apple Music, JioSaavn), News, Myntra, Amazon, Flipkart,  Wikipedia or YouTube links if available.
+
+**Input:**
+- URL List: {url_list}
+- User Query: {user_query}
+
+Return a list of the most relevant URLs and their titles.
 """
 
-@task(name="LLM Runs", retries=3, retry_delay_seconds=5, log_prints=True)
-async def url_link_parser(user_query, url_list: List[BasePayload]):
+
+PROMPT_2 = """You are a helpful and informative writing assistant.
+
+Your task is to convert the given web page text and image descriptions into a clean, engaging article based on the user's query, using Markdown formatting.
+
+**Instructions:**
+1. Summarize the most important facts — names, dates, achievements, numbers.
+2. Write a clear, easy-to-read article in Markdown format:
+   - Use headings, bullet points, and short paragraphs.
+   - Keep the tone informative yet engaging.
+3. Select the top 3 most relevant and meaningful image URLs (avoid restricted sources like `gstatic`).
+4. Do NOT include any clickable links or raw URLs in the final article.
+
+---
+
+**Input:**
+- User Query: {user_query}
+- Full Page Text: {page_content_full_text}
+- Image URLs with Descriptions: {page_content_images}
+"""
+
+
+@task(name="LLM Runs", log_prints=True)
+async def url_link_parser(
+    user_query, url_list: List[BasePayload], page_content: PageContent
+) -> URLResponseModel:
     logger = get_run_logger()
-    llm = AzureChatOpenAI(
-        api_version="2024-08-01-preview",
-        deployment_name="gpt-4o-0806",
-        temperature=0.0,
-        streaming=True,
-        client=None,  # Ensure this is correctly set or omitted if not needed
-    ).with_structured_output(URLResponseModel)
-    prompt = PromptTemplate(
-            template=PROMPT,
-            input_variables=["user_query", "url_list"],
-        )
-    chain = prompt | llm
-    response = await chain.ainvoke({"user_query": user_query, "url_list": [i.url for i in url_list]})
+
+    # Wait for both tasks to complete concurrently
+    response_list, response_content = await asyncio.gather(
+        LLMResponse.open_ai(
+            response_model=BasePayload,
+            prompt=PROMPT_1,
+            input_variables_payload={
+                "url_list": url_list,
+                "user_query": user_query,
+            },
+            output_is_list=True,
+        ),
+        LLMResponse.open_ai(
+            response_model=PageContent,
+            prompt=PROMPT_2,
+            input_variables_payload={
+                "user_query": user_query,
+                "page_content_full_text": page_content.full_text[
+                    : len(page_content.full_text) // TRIM_CONSTANT
+                ],
+                "page_content_images": page_content.images,
+            },
+            output_is_list=False,
+        ),
+    )
+
+    response = URLResponseModel(
+        urls=response_list,
+        page_content=response_content,
+    )
+
     logger.info(f"LLM Response: {response}")
     return response

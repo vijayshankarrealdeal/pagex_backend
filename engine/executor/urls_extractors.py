@@ -10,7 +10,6 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 import threading
 from prefect import task, get_run_logger
-import lxml.html
 from engine.models.url_model import BasePayload
 
 # Create a thread-local driver pool to reuse drivers per thread.
@@ -40,21 +39,8 @@ def run_search(search_term):
     )
     driver.get(f"https://www.google.com/search?q={search_term}")
     logger.info(f"Searching for: {search_term} {driver.page_source}")
-    time.sleep(3)  # wait for the page to load
+    time.sleep(2)  # wait for the page to load
     return driver.page_source
-
-
-@task
-def extract_url_and_text(html: str):
-    tree = lxml.html.fromstring(html)
-    anchors = tree.xpath("//a[@href]")
-    results = []
-    for a in anchors:
-        link = a.get("href")
-        text = a.text_content().strip()
-        results.append(BasePayload(url=link, title=text))
-    return results
-
 
 def get_driver():
     """Initialize a headless Chrome WebDriver for Selenium."""
@@ -94,7 +80,7 @@ def extract_page_info(url: str):
         )
 
         driver.get(url)
-
+        time.sleep(1)  # Wait for the page to load
         # Attempt to auto-click common cookie/consent buttons
         try:
             driver.execute_script(
@@ -115,6 +101,7 @@ def extract_page_info(url: str):
         title = f"Error: {e}"
         page_snippet = ""
 
+    
     return BasePayload(url=url, title=title, summary=page_snippet, is_youtube=False)
 
 

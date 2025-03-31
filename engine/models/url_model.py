@@ -1,6 +1,12 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 
+class ImagePayload(BaseModel):
+    src: str
+    alt: str
+class PageContent(BaseModel):
+    images: List[ImagePayload]
+    full_text: str
 
 class BasePayload(BaseModel):
     url : str
@@ -12,5 +18,6 @@ class BasePayload(BaseModel):
     is_youtube : Optional[bool] = Field(None, description="Is the URL a YouTube link")
 
 class URLResponseModel(BaseModel):
-    urls: List[BasePayload] = Field(..., description="List of URLs")
+    page_content : Optional[PageContent] = Field(None, description="Content of the Main URL")
+    urls: Optional[List[BasePayload]] = Field(..., description="List of URLs")
 

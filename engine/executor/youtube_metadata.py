@@ -34,7 +34,22 @@ def get_video_metadata(video_url) -> YoutubePayload:
             }
             return YoutubePayload(**metadata)
     except Exception as e:
-        return {"youtube_url": video_url, "error": str(e)}
+        metadata = {
+            "title": "",
+            "summary": None,
+            "url": video_url,
+            "result_rank": 0,
+            "video_details": {
+                "channel": "",
+                "air_time": "",
+                "duration_seconds": 0,
+                "published_at": "",
+            },
+            "like_count": 0,
+            "view_count": 0,
+            "is_youtube": True,
+        }
+        return YoutubePayload(**metadata)
 
 
 @task

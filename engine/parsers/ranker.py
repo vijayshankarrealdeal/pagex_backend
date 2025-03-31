@@ -55,9 +55,13 @@ async def llm_ranker(
     semaphore = asyncio.Semaphore(6)
     async def _summarize(i, value):
         async with semaphore:
-            base_payload = await chain.ainvoke({"payload": value.model_dump(), "query": query})
-            logger.info(f"LLM Summary [{i}]: {base_payload}")
-            payload[i].rank_reason = base_payload.rank_reason
-            payload[i].result_rank = base_payload.result_rank
+            try:
+                base_payload = await chain.ainvoke({"payload": value.model_dump(), "query": query})
+                logger.info(f"LLM Summary [{i}]: {base_payload}")
+                payload[i].rank_reason = base_payload.rank_reason
+                payload[i].result_rank = base_payload.result_rank
+            except Exception as e:
+                logger.error(f"Error during LLM summarization: {e}")
+                pass
     await asyncio.gather(*(_summarize(i, value) for i, value in enumerate(payload)))
     return payload
