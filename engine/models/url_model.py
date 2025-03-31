@@ -20,4 +20,3 @@ class BasePayload(BaseModel):
 class URLResponseModel(BaseModel):
     page_content : Optional[PageContent] = Field(None, description="Content of the Main URL")
     urls: Optional[List[BasePayload]] = Field(..., description="List of URLs")
-

@@ -1,16 +1,14 @@
 # Scrape the page.
 from concurrent.futures import ThreadPoolExecutor
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
 import time
 import asyncio
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
 import threading
-from prefect import task, get_run_logger
+from prefect import task
 from engine.models.url_model import BasePayload
+from engine.utils import extract_all_content
 
 # Create a thread-local driver pool to reuse drivers per thread.
 driver_pool = {}
@@ -46,6 +44,7 @@ def _get_driver():
 def extract_page_info(url: str):
     """Extract page info using Selenium WebDriver (not async, so we use threads)."""
     driver = _get_driver()
+    summary = ""
     try:
         # Hide the 'webdriver' property (sometimes websites block automation tools)
         driver.execute_script(
@@ -53,7 +52,7 @@ def extract_page_info(url: str):
         )
 
         driver.get(url)
-        time.sleep(1)  # Wait for the page to load
+        time.sleep(2)  # Wait for the page to load
         # Attempt to auto-click common cookie/consent buttons
         try:
             driver.execute_script(
@@ -69,15 +68,14 @@ def extract_page_info(url: str):
         title = driver.title
         # Grab first 200 characters of page source for a snippet
         page_snippet = driver.page_source
-
+        _, summary, _ = extract_all_content(page_snippet)
     except Exception as e:
         title = f"Error: {e}"
-        page_snippet = ""
-    return BasePayload(url=url, title=title, summary=page_snippet, is_youtube=False)
+    return BasePayload(url=url, title=title, summary=summary, is_youtube=False)
 
 
 @task
-async def extract_external_links(urls: list):
+async def extract_external_links_info(urls: list):
     """Run page extraction asynchronously using threads."""
     results = []
     loop = asyncio.get_event_loop()

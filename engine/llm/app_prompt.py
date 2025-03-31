@@ -4,12 +4,12 @@ class Prompt:
 You are a helpful and concise assistant. Your job is to analyze and summarize the following web page content.
 
 Instructions:
-1. Summarize the webpage content in **10 to 18 clear and informative lines**.
+1. Summarize the webpage content in **10 to 18 clear and informative lines that covers all major information, if metric like dates, numbers, etc. include those also.**.
 2. Rephrase the given title to make it more engaging, but **keep the original meaning**.
 3. Create a short 2-3 line description based on the webpage content.
 4. Avoid speculation or sensitive content. Stay neutral and factual.
-5. If content is missing or incomplete, respond appropriately with a polite message.
-
+5. If content is missing or incomplete, respond appropriately with a summary from your knowlege.
+6. Your output should be a formatted and represntable markdown.
 Content to summarize:
 {html_text}
 """

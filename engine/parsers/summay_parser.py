@@ -6,15 +6,13 @@ from engine.llm.app_llm import LLMResponse
 from engine.models.url_model import BasePayload
 from engine.models.youtube_payload import YoutubePayload
 from engine.llm.app_prompt import Prompt
-from engine.utils import TRIM_CONSTANT, extract_text
+from engine.utils import TRIM_CONSTANT
 
 
 
 
-def payload_clean_up_to_feed_in_llm(base_payload: Union[BasePayload, YoutubePayload]) -> str:
-    """Extract and clean text from the HTML content."""
-    text = extract_text(base_payload.summary)
-    return f"The title of the webpage is '{base_payload.title}'\nand its page content is:\n{text}...\n"
+def prepare_payload(base_payload: Union[BasePayload, YoutubePayload]) -> str:
+    return f"The title of the webpage is '{base_payload.title}'\nand its page content is:\n{base_payload.summary}"
 
 
 @task(log_prints=True)
@@ -23,13 +21,13 @@ async def webpage_text_parsing_using_llm(
 ) -> int:
     logger = get_run_logger()
     try:
-        with multiprocessing.Pool(processes=4) as pool:
-            results = pool.map(payload_clean_up_to_feed_in_llm, payload)
+        with multiprocessing.Pool(processes=8) as pool:
+            results = pool.map(prepare_payload, payload)
     except Exception as e:
         logger.error(f"Error during multiprocessing: {e}")
         return []
 
-    logger.info(f"Extracted text from HTML: {[i[:100] for i in results]}")
+    logger.info(f"Extracted text from HTML: {[i[:400] for i in results]}")
     semaphore = asyncio.Semaphore(8)
     success_count = 0
 
@@ -43,6 +41,7 @@ async def webpage_text_parsing_using_llm(
                     input_variables_payload={
                         "html_text": value[: len(value) // TRIM_CONSTANT]
                     },
+                    output_is_list=False
                 )
                 logger.info(f"LLM Summary [{i}]: {base_payload}")
                 payload[i].summary = base_payload.summary
@@ -52,8 +51,6 @@ async def webpage_text_parsing_using_llm(
             except Exception as e:
                 logger.error(f"LLM summarization failed at index {i}: {e}")
                 pass
-
     await asyncio.gather(*(_summarize(i, value) for i, value in enumerate(results)))
-
     logger.info(f"Summarization completed for {success_count}/{len(payload)} payloads.")
     return payload

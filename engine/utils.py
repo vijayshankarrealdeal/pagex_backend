@@ -31,7 +31,6 @@ def sanitize_text(text: str) -> str:
 
 def extract_all_content(html: str):
     """Extract text, URLs, and images from HTML content, clean the text, and return a structured object."""
-    logger = get_run_logger()
     tree = lxml_html.fromstring(html)
 
     # Extract images
@@ -81,33 +80,39 @@ def extract_all_content(html: str):
     full_text = "\n".join(text_chunks)
     full_text = clean_html(full_text)  # Clean extracted text
     full_text = sanitize_text(full_text)  # Optionally sanitize the text
-
-    logger.info(f"Extracted text: {image_results, full_text, url_results}")
     return image_results, full_text, url_results
 
 
-@task
-def extract_text(html: str) -> str:
-    _, full_text, _ = extract_all_content(html)
-    return full_text
+# @task
+# def extract_text(html: str) -> str:
+#     logger = get_run_logger()
+#     _, full_text, _ = extract_all_content(html)
+#     logger.info(f"Extracted text: {full_text}...")
+#     return full_text
 
 
-@task
-def extract_images(html: str) -> List[ImagePayload]:
-    image_results, _, _ = extract_all_content(html)
-    return image_results
+# @task
+# def extract_images(html: str) -> List[ImagePayload]:
+#     logger = get_run_logger()
+#     image_results, _, _ = extract_all_content(html)
+#     logger.info(f"Extracted images: {image_results}...")
+#     return image_results
 
 
 @task
 def extract_url_and_text(html: str) -> List[BasePayload]:
+    logger = get_run_logger()
     _, _, url_results = extract_all_content(html)
+    logger.info(f"Extracted URLs: {url_results}...")
     return url_results
 
 
 def extract_text_and_images(html: str) -> PageContent:
     """Extract text and images from HTML content."""
+    logger = get_run_logger()
     image_results, full_text, _ = extract_all_content(html)
+    logger.info(f"Extracted text: {full_text}...")
     return PageContent(
-        text=full_text,
+        full_text=full_text,
         images=image_results,
     )
