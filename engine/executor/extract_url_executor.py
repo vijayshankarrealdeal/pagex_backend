@@ -15,34 +15,7 @@ from engine.models.url_model import BasePayload
 # Create a thread-local driver pool to reuse drivers per thread.
 driver_pool = {}
 
-
-@task(log_prints=True)
-def run_search(search_term):
-    # create Chromeoptions instance
-    logger = get_run_logger()
-    options = webdriver.ChromeOptions()
-    # adding argument to disable the AutomationControlled flag
-    options.add_argument("--disable-blink-features=AutomationControlled")
-
-    # exclude the collection of enable-automation switches
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-
-    # turn-off userAutomationExtension
-    options.add_experimental_option("useAutomationExtension", False)
-
-    # setting the driver path and requesting a page
-    driver = webdriver.Chrome(options=options)
-
-    # changing the property of the navigator value for webdriver to undefined
-    driver.execute_script(
-        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-    )
-    driver.get(f"https://www.google.com/search?q={search_term}")
-    logger.info(f"Searching for: {search_term} {driver.page_source}")
-    time.sleep(2)  # wait for the page to load
-    return driver.page_source
-
-def get_driver():
+def _get_driver():
     """Initialize a headless Chrome WebDriver for Selenium."""
     thread_id = threading.get_ident()
     if thread_id not in driver_pool:
@@ -72,7 +45,7 @@ def get_driver():
 
 def extract_page_info(url: str):
     """Extract page info using Selenium WebDriver (not async, so we use threads)."""
-    driver = get_driver()
+    driver = _get_driver()
     try:
         # Hide the 'webdriver' property (sometimes websites block automation tools)
         driver.execute_script(
@@ -100,8 +73,6 @@ def extract_page_info(url: str):
     except Exception as e:
         title = f"Error: {e}"
         page_snippet = ""
-
-    
     return BasePayload(url=url, title=title, summary=page_snippet, is_youtube=False)
 
 
