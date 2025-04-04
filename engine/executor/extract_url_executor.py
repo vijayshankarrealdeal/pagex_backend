@@ -7,7 +7,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import threading
 from prefect import task
-from engine.models.url_model import BasePayload
+from engine.models.search_helper_models import BasePayload
 from engine.utils import extract_all_content
 
 # Create a thread-local driver pool to reuse drivers per thread.

@@ -3,8 +3,7 @@ from typing import List, Union
 from prefect import get_run_logger, task
 from engine.llm.app_llm import LLMResponse
 from engine.llm.app_prompt import Prompt
-from engine.models.url_model import BasePayload
-from engine.models.youtube_payload import YoutubePayload
+from engine.models.search_helper_models import BasePayload, YoutubePayload
 
 
 @task(log_prints=True)

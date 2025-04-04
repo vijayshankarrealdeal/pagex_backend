@@ -2,8 +2,7 @@ from typing import List
 import yt_dlp
 from prefect import task
 from concurrent.futures import ThreadPoolExecutor
-
-from engine.models.youtube_payload import YoutubePayload
+from engine.models.search_helper_models import YoutubePayload
 
 
 def get_video_metadata(video_url) -> YoutubePayload:

@@ -7,7 +7,7 @@ from selenium import webdriver
 import time, re
 from selenium import webdriver
 from prefect import task, get_run_logger
-from engine.models.url_model import BasePayload, PageContent
+from engine.models.search_helper_models import BasePayload, PageContent
 from engine.utils import extract_text_and_images, extract_url_and_text
 
 

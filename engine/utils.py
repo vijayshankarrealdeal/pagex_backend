@@ -2,7 +2,7 @@ from typing import List
 from lxml import html as lxml_html
 from prefect import get_run_logger, task
 from lxml.html.clean import Cleaner
-from engine.models.url_model import BasePayload, ImagePayload, PageContent
+from engine.models.search_helper_models import BasePayload, ImagePayload, PageContent
 import re
 from bs4 import BeautifulSoup
 

@@ -1,4 +1,4 @@
-from engine.models.url_model import BasePayload, URLResponseModel
+from engine.models.search_helper_models import BasePayload, URLResponseModel
 cached_llm_response_urls = URLResponseModel(urls=[
     BasePayload(
         url="https://www.python.org/",

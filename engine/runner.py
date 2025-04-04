@@ -2,7 +2,7 @@ from prefect import flow, get_run_logger
 from engine.executor.search_executor import SearchExecutor
 from engine.executor.extract_url_executor import extract_external_links_info
 from engine.executor.youtube_metadata_executor import fetch_youtube_multiple_metadata
-from engine.models.url_model import URLResponseModel
+from engine.models.search_helper_models import URLResponseModel
 from engine.parsers.ranker import llm_ranker
 from engine.parsers.summay_parser import webpage_text_parsing_using_llm
 from engine.parsers.url_parsers import url_link_parser
@@ -32,4 +32,4 @@ async def run_query(query):
 
     payload = await webpage_text_parsing_using_llm(payload)
     ranked_payload = await llm_ranker(query, payload)
-    return URLResponseModel(urls =  ranked_payload, page_content=url_link_parser_response.page_content)
+    return URLResponseModel(urls = ranked_payload, page_content=url_link_parser_response.page_content)

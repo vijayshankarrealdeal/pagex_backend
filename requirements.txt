@@ -6,3 +6,6 @@ langchain-google-genai
 lxml_html_clean
 google-generativeai
 google-genai
+beautifulsoup4
+langchain-openai
+langchain

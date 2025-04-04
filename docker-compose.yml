@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  fastapi_app:
+    build: .
+    container_name: fastapi_app
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      - prefect_server
+    environment:
+      - PREFECT_API_URL=http://prefect_server:4200/api
+
+  prefect_server:
+    image: prefecthq/prefect:latest
+    container_name: prefect_server
+    command: ["prefect", "server", "start"]
+    ports:
+      - "4200:4200"
+
+  postgres:
+    image: postgres:14
+    container_name: prefect_postgres
+    environment:
+      POSTGRES_USER: prefect
+      POSTGRES_PASSWORD: prefect
+      POSTGRES_DB: prefect
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

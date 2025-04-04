@@ -3,7 +3,7 @@ from typing import List
 
 from engine.llm.app_llm import LLMResponse
 from engine.llm.app_prompt import Prompt
-from engine.models.url_model import BasePayload, PageContent, URLResponseModel
+from engine.models.search_helper_models import BasePayload, PageContent, URLResponseModel
 from prefect import task, get_run_logger
 from engine.utils import TRIM_CONSTANT
 
