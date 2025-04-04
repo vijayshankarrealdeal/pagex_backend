@@ -6,7 +6,7 @@ app = FastAPI()
 
 # Allow specific origins for Flutter web + dev setup
 origins = [
-    "http://localhost:61793/",        # Flutter web dev (if using web)
+    "http://localhost:64168/",        # Flutter web dev (if using web)
 ]
 
 app.add_middleware(

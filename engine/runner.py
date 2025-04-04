@@ -10,11 +10,10 @@ import asyncio
 
 @flow(name="search_and_extract")
 async def run_query(query):
+
     search_exe = SearchExecutor()
     urls_with_text, page_content = search_exe.extract_search_information(query)
-    for i in page_content.images:
-        if len(i.src) > 1200:
-            page_content.images.remove(i)
+
     if len(page_content.full_text) > 120000:
         page_content.full_text = page_content.full_text[:128000]
 

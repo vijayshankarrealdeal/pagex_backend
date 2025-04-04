@@ -6,6 +6,7 @@ from engine.models.search_helper_models import BasePayload, ImagePayload, PageCo
 import re
 from bs4 import BeautifulSoup
 
+
 TRIM_CONSTANT = 1
 
 
@@ -32,15 +33,6 @@ def sanitize_text(text: str) -> str:
 def extract_all_content(html: str):
     """Extract text, URLs, and images from HTML content, clean the text, and return a structured object."""
     tree = lxml_html.fromstring(html)
-
-    # Extract images
-    images = tree.xpath("//img[@src]")
-    image_results = []
-    for img in images:
-        src = img.get("src")
-        alt = img.get("alt") or ""
-        image_results.append(ImagePayload(src=src, alt=alt.strip()))
-
     # Extract URLs (links)
     anchors = tree.xpath("//a[@href]")
     url_results = []
@@ -80,39 +72,50 @@ def extract_all_content(html: str):
     full_text = "\n".join(text_chunks)
     full_text = clean_html(full_text)  # Clean extracted text
     full_text = sanitize_text(full_text)  # Optionally sanitize the text
-    return image_results, full_text, url_results
-
-
-# @task
-# def extract_text(html: str) -> str:
-#     logger = get_run_logger()
-#     _, full_text, _ = extract_all_content(html)
-#     logger.info(f"Extracted text: {full_text}...")
-#     return full_text
-
-
-# @task
-# def extract_images(html: str) -> List[ImagePayload]:
-#     logger = get_run_logger()
-#     image_results, _, _ = extract_all_content(html)
-#     logger.info(f"Extracted images: {image_results}...")
-#     return image_results
-
+    return  full_text, url_results
 
 @task
 def extract_url_and_text(html: str) -> List[BasePayload]:
     logger = get_run_logger()
-    _, _, url_results = extract_all_content(html)
+    _, url_results = extract_all_content(html)
     logger.info(f"Extracted URLs: {url_results}...")
     return url_results
 
 
-def extract_text_and_images(html: str) -> PageContent:
+def extract_texts(html: str) -> str:
     """Extract text and images from HTML content."""
     logger = get_run_logger()
-    image_results, full_text, _ = extract_all_content(html)
+    full_text, _ = extract_all_content(html)
     logger.info(f"Extracted text: {full_text}...")
-    return PageContent(
-        full_text=full_text,
-        images=image_results,
-    )
+    return full_text
+
+
+def extract_image_data(html: str) -> List[ImagePayload]:
+    soup = BeautifulSoup(html, "html.parser")
+    image_data = []
+
+    for img in soup.find_all("img"):
+        src = img.get("src")
+        width = img.get("width")
+        height = img.get("height")
+
+        # Fallback to style parsing if width/height not directly present
+        if (not width or not height) and img.has_attr("style"):
+            style = img["style"]
+            width_match = re.search(r"width\s*:\s*(\d+)", style)
+            height_match = re.search(r"height\s*:\s*(\d+)", style)
+            if not width and width_match:
+                width = width_match.group(1)
+            if not height and height_match:
+                height = height_match.group(1)
+
+        # Convert height to int if possible
+        try:
+            height = int(float(height)) if height else None
+        except ValueError:
+            height = None
+
+        if src:
+            image_data.append({"src": src, "width": width, "height": height})
+
+    return [ImagePayload(**i) for i in image_data if i and i['height']> 200]

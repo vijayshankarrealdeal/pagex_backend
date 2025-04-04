@@ -3,12 +3,13 @@ from typing import List
 
 from engine.llm.app_llm import LLMResponse
 from engine.llm.app_prompt import Prompt
-from engine.models.search_helper_models import BasePayload, PageContent, URLResponseModel
+from engine.models.search_helper_models import (
+    BasePayload,
+    PageContent,
+    URLResponseModel,
+)
 from prefect import task, get_run_logger
 from engine.utils import TRIM_CONSTANT
-
-
-
 
 
 @task(name="LLM Runs", log_prints=True)
@@ -29,7 +30,6 @@ async def url_link_parser(
             output_is_list=True,
         ),
         LLMResponse.open_ai(
-            response_model=PageContent,
             prompt=Prompt.QUERY_SUMMERY_AND_IMAGE_PROMPT,
             input_variables_payload={
                 "user_query": user_query,
@@ -41,10 +41,12 @@ async def url_link_parser(
             output_is_list=False,
         ),
     )
-
+    
     response = URLResponseModel(
         urls=response_list,
-        page_content=response_content,
+        page_content=PageContent(
+            full_text=response_content, images=page_content.images
+        ),
     )
 
     logger.info(f"LLM Response: {response}")

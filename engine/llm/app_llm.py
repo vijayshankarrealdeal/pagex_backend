@@ -14,7 +14,10 @@ class LLMResponse:
 
     @staticmethod
     async def open_ai(
-        response_model: BaseModel, prompt: str, input_variables_payload: dict, output_is_list: bool = True
+        prompt: str,
+        input_variables_payload: dict,
+        output_is_list: bool = True,
+        response_model: BaseModel = None,
     ):
         class TempClass(BaseModel):
             list_response: List[response_model]
@@ -26,16 +29,23 @@ class LLMResponse:
             streaming=True,
             client=None,  # Ensure this is correctly set or omitted if not needed
         )
-        if output_is_list:
-            llm = llm.with_structured_output(TempClass)
-        else:
-            llm = llm.with_structured_output(response_model)
         prompt = PromptTemplate(
             template=prompt,
             input_variables=list(input_variables_payload.keys()),
         )
+        if response_model == None:
+            chain = prompt | llm
+            response = await chain.ainvoke(input_variables_payload)
+            return response.content
+
+        if output_is_list:
+            llm = llm.with_structured_output(TempClass)
+        else:
+            llm = llm.with_structured_output(response_model)
+            
         chain = prompt | llm
         response = await chain.ainvoke(input_variables_payload)
+
         if output_is_list:
             response = response.list_response
         return response
@@ -53,7 +63,7 @@ class LLMResponse:
         client = genai.Client(api_key=GEMINI_API_KEY)
         response = await client.aio.models.generate_content(
             model=model_name,
-            #"gemini-2.0-flash",
+            # "gemini-2.0-flash",
             contents=prompt,
             config={
                 "response_mime_type": "application/json",

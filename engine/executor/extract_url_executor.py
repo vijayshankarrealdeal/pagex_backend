@@ -25,7 +25,7 @@ def _get_driver():
         chrome_options.add_argument("--disable-popup-blocking")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--no-sandbox")
-
+        chrome_options.add_argument("--disable-software-rasterizer")
         # Load only initial HTML without waiting for full resources
         chrome_options.page_load_strategy = "eager"
 
@@ -35,8 +35,8 @@ def _get_driver():
 
         driver_pool[thread_id] = webdriver.Chrome(options=chrome_options)
         # Set load timeouts (adjust if needed)
-        driver_pool[thread_id].set_page_load_timeout(10)
-        driver_pool[thread_id].set_script_timeout(10)
+        driver_pool[thread_id].set_page_load_timeout(30)
+        driver_pool[thread_id].set_script_timeout(30)
 
     return driver_pool[thread_id]
 
@@ -68,7 +68,7 @@ def extract_page_info(url: str):
         title = driver.title
         # Grab first 200 characters of page source for a snippet
         page_snippet = driver.page_source
-        _, summary, _ = extract_all_content(page_snippet)
+        summary, _ = extract_all_content(page_snippet)
     except Exception as e:
         title = f"Error: {e}"
     return BasePayload(url=url, title=title, summary=summary, is_youtube=False)

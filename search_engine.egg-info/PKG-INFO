@@ -1,0 +1,27 @@
+Metadata-Version: 2.2
+Name: search-engine
+Version: 1.0.0
+Summary: A search engine project
+Home-page: https://github.com/yourusername/search-engine
+Author: Vijay Shankar
+Author-email: vijayshankar@example.com
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: selenium
+Requires-Dist: yt-dlp
+Requires-Dist: undetected-chromedriver
+Requires-Dist: prefect
+Requires-Dist: langchain-google-genai
+Requires-Dist: lxml_html_clean
+Requires-Dist: google-generativeai
+Requires-Dist: google-genai
+Requires-Dist: beautifulsoup4
+Requires-Dist: langchain-openai
+Requires-Dist: langchain
+Dynamic: author
+Dynamic: author-email
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

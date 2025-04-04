@@ -16,7 +16,7 @@ Content to summarize:
 
     URL_EXTRACTOR_PROMPT = """You are an intelligent and creative language model.
 
-Your task is to extract the most relevant URLs as much you can and their titles based on the user's query.
+Your task is to extract the most relevant URLs as much you can from `URL List` and create their titles based on the user's query.
 
 **Instructions:**
 - Remove any Google policy, login, support, or irrelevant URLs.
@@ -32,15 +32,16 @@ Return a list of the most relevant URLs and their titles.
 
     QUERY_SUMMERY_AND_IMAGE_PROMPT = """You are a helpful and informative writing assistant.
 
-Your task is to convert the given web page text and image descriptions into a clean, engaging article based on the user's query, using Markdown formatting.
+Your task is to convert the given web page text and image descriptions into a clean, comprehesive long engaging article based on the user's query, using Markdown formatting.
 
 **Instructions:**
 1. Summarize the most important facts — names, dates, achievements, numbers.
 2. Write a clear, easy-to-read article in Markdown format:
    - Use headings, bullet points, and short paragraphs.
    - Keep the tone informative yet engaging.
-3. Select the top 3 most relevant and meaningful image URLs (avoid restricted sources like `gstatic`).
-4. Do NOT include any clickable links or raw URLs in the final article.
+   - Use Images list to add images in the article, but don't all images, only few which are relevant to the content.
+3. Make the article informative and engaging.
+4. If the content is missing or incomplete, respond appropriately with a summary from your knowledge.
 
 ---
 

@@ -3,30 +3,39 @@ This module is responsible for executing search queries using Selenium WebDriver
 It handles the initialization of the WebDriver and the execution of search queries.
 """
 
+from concurrent.futures import ThreadPoolExecutor
 from selenium import webdriver
 import time, re
 from selenium import webdriver
 from prefect import task, get_run_logger
 from engine.models.search_helper_models import BasePayload, PageContent
-from engine.utils import extract_text_and_images, extract_url_and_text
+from engine.utils import extract_image_data, extract_texts, extract_url_and_text
 
 
 class SearchExecutor:
 
     def __init__(self):
         self.raw_html = None
+        self.image_html = None
 
+    @task(log_prints=True)
     def extract_search_information(
         self, query: str
     ) -> tuple[list[BasePayload], PageContent]:
-        self.run_search(query)
-        urls_with_text, page_content = self.extract_from_webpage(self.raw_html)
-        return urls_with_text, page_content
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_search = executor.submit(self.run_search, query)
+            future_image = executor.submit(self.run_image_search, query)
+            future_search.result()
+            future_image.result()
 
-    @task(log_prints=True)
-    def run_search(self, search_term) -> None:
-        # create Chromeoptions instance
-        logger = get_run_logger()
+        urls_with_text, page_text = self.extract_from_webpage(self.raw_html)
+        image_result = extract_image_data(self.image_html)
+        self.image_html = None  # Clear the image HTML after extraction
+        self.raw_html = None  # Clear the raw HTML after extraction
+        return urls_with_text, PageContent(full_text=page_text, images=image_result)
+
+    @staticmethod
+    def get_driver():
         options = webdriver.ChromeOptions()
         # adding argument to disable the AutomationControlled flag
         options.add_argument("--disable-blink-features=AutomationControlled")
@@ -44,6 +53,13 @@ class SearchExecutor:
         driver.execute_script(
             "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
         )
+        return driver
+
+    @task(log_prints=True)
+    def run_search(self, search_term) -> None:
+        # create Chromeoptions instance
+        logger = get_run_logger()
+        driver = self.get_driver()
         driver.get(f"https://www.google.com/search?q={search_term}")
         logger.info(f"Searching for: {search_term} {driver.page_source}")
         time.sleep(2)  # wait for the page to load
@@ -59,7 +75,29 @@ class SearchExecutor:
         text = re.sub(r"\s{2,}", " ", text)  # Extra safety
         return text.strip()
 
-    def extract_from_webpage(self, html: str) -> tuple[list[BasePayload], PageContent]:
+    @task(log_prints=True)
+    def run_image_search(self, search_term) -> None:
+        logger = get_run_logger()
+        url = f"https://in.images.search.yahoo.com/search/images?p={search_term}"
+        driver = self.get_driver()
+        driver.get(url)
+        time.sleep(2)  # Let the initial content load
+        last_height = driver.execute_script("return document.body.scrollHeight")
+        logger.info(f"Starting scroll for: {search_term}")
+        for _ in range(2):  # Adjust number of scrolls if needed
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(1.5)  # Give time to load new content
+            new_height = driver.execute_script("return document.body.scrollHeight")
+
+            if new_height == last_height:
+                break  # No more content to scroll
+            last_height = new_height
+
+        self.image_html = driver.page_source
+        logger.info(f"Finished scrolling. Length of HTML: {len(self.image_html)}")
+        driver.quit()
+
+    def extract_from_webpage(self, html: str) -> tuple[list[BasePayload], str]:
         """
         Extracts URLs and text from the given HTML content.
         """
@@ -67,8 +105,8 @@ class SearchExecutor:
         urls_with_text = extract_url_and_text(html)
 
         # Extract images and full text
-        page_content = extract_text_and_images(html)
+        page_text = extract_texts(html)
 
         # Clean the text in the page content
-        page_content.full_text = self.clean_text(page_content.full_text)
-        return urls_with_text, page_content
+        page_text = self.clean_text(page_text)
+        return urls_with_text, page_text

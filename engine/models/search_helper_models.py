@@ -20,7 +20,7 @@ class YoutubePayload(BasePayload):
 
 class ImagePayload(BaseModel):
     src: str
-    alt: str
+    height: int
 
 
 class PageContent(BaseModel):
